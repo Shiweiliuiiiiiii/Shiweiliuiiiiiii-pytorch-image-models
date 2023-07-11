@@ -1,4 +1,4 @@
-torchrun --nproc_per_node=8 train.py /mnt/Data/ImageNet/ \
+torchrun --nproc_per_node=1 train.py /mnt/Data/Imagenet/ \
   --model deit_base_patch16_224 \
   --epochs 300 \
   --opt adamW \
