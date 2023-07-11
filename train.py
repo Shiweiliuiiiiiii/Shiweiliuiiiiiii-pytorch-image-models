@@ -37,7 +37,10 @@ from timm.models import create_model, safe_model_name, resume_checkpoint, load_c
 from timm.optim import create_optimizer_v2, optimizer_kwargs
 from timm.scheduler import create_scheduler_v2, scheduler_kwargs
 from timm.utils import ApexScaler, NativeScaler
-
+#from fairseq.optim import adam,adadelta,adagrad,sgd,bmuf
+#from fairseq.optim.adam import FairseqAdam,FairseqAdamConfig
+#from fairseq.optim.sgd import SGD
+#from fairseq.optim import FairseqOptimizer, Adam,SGD
 try:
     from apex import amp
     from apex.parallel import DistributedDataParallel as ApexDDP
@@ -219,6 +222,12 @@ group.add_argument('--decay-epochs', type=float, default=90, metavar='N',
                    help='epoch interval to decay LR')
 group.add_argument('--warmup-epochs', type=int, default=5, metavar='N',
                    help='epochs to warmup LR, if scheduler supports')
+
+group.add_argument('--warmup_init_lr', type=float, default=1e-6, metavar='N',
+                   help='epochs to warmup LR, if scheduler supports')
+group.add_argument('--warmup_updates', type=int, default=4000, metavar='N',
+                   help='epochs to warmup LR, if scheduler supports')
+
 group.add_argument('--warmup-prefix', action='store_true', default=False,
                    help='Exclude warmup period from decay schedule.'),
 group.add_argument('--cooldown-epochs', type=int, default=0, metavar='N',
@@ -354,6 +363,10 @@ group.add_argument('--use-multi-epochs-loader', action='store_true', default=Fal
                    help='use the multi-epochs-loader to save time at the beginning of every epoch')
 group.add_argument('--log-wandb', action='store_true', default=False,
                    help='log training and validation metrics to wandb')
+parser.add_argument('--adam-betas', default='(0.9, 0.999)', metavar='B',
+                    help='betas for Adam optimizer')
+parser.add_argument('--adam-eps', type=float, default=1e-8, metavar='D',
+                    help='epsilon for Adam optimizer')
 
 
 def _parse_args():
@@ -505,6 +518,7 @@ def main():
             _logger.info(
                 f'Learning rate ({args.lr}) calculated from base learning rate ({args.lr_base}) '
                 f'and effective global batch size ({global_batch_size}) with {args.lr_base_scale} scaling.')
+
 
     optimizer = create_optimizer_v2(
         model,
@@ -745,6 +759,7 @@ def main():
         optimizer,
         **scheduler_kwargs(args),
         updates_per_epoch=updates_per_epoch,
+                args=args
     )
     start_epoch = 0
     if args.start_epoch is not None:
@@ -758,9 +773,9 @@ def main():
         else:
             lr_scheduler.step(start_epoch)
 
-    if utils.is_primary(args):
-        _logger.info(
-            f'Scheduled epochs: {num_epochs}. LR stepped per {"epoch" if lr_scheduler.t_in_epochs else "update"}.')
+    #if utils.is_primary(args):
+    #    _logger.info(
+    #        f'Scheduled epochs: {num_epochs}. LR stepped per {"epoch" if lr_scheduler.t_in_epochs else "update"}.')
 
     try:
         for epoch in range(start_epoch, num_epochs):

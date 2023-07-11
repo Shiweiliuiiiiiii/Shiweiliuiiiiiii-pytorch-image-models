@@ -11,8 +11,9 @@ from .plateau_lr import PlateauLRScheduler
 from .poly_lr import PolyLRScheduler
 from .step_lr import StepLRScheduler
 from .tanh_lr import TanhLRScheduler
-
-
+import torch
+#from fairseq.optim.lr_scheduler.inverse_square_root_schedule import InverseSquareRootSchedule,InverseSquareRootLRScheduleConfig
+from .invert_square_root_schedule import InverseSquareRootSchedule
 def scheduler_kwargs(cfg):
     """ cfg/argparse to kwargs helper
     Convert scheduler args in argparse args or cfg (.dot) like object to keyword args.
@@ -81,6 +82,7 @@ def create_scheduler_v2(
         plateau_mode: str = 'max',
         step_on_epochs: bool = True,
         updates_per_epoch: int = 0,
+        args=None,
 ):
     t_initial = num_epochs
     warmup_t = warmup_epochs
@@ -191,6 +193,11 @@ def create_scheduler_v2(
             **warmup_args,
             **noise_args,
         )
+    elif sched == 'inverse_sqrt':
+        #scheduler_config = InverseSquareRootLRScheduleConfig(warmup_updates=warmup_epochs, warmup_init_lr=warmup_lr)
+        #scheduler_config.lr_scheduler='fixed'
+        lr_scheduler = InverseSquareRootSchedule(args,optimizer)
+
 
     if hasattr(lr_scheduler, 'get_cycle_length'):
         # for cycle based schedulers (cosine, tanh, poly) recalculate total epochs w/ cycles & cooldown
